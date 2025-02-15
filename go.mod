@@ -1,3 +1,3 @@
-module github.com/akshayganeshen/napi-go
+module github.com/abhisekp/napi-go
 
-go 1.18
+go 1.24

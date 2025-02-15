@@ -3,7 +3,7 @@ package js
 import (
 	"errors"
 
-	"github.com/akshayganeshen/napi-go"
+	"github.com/abhisekp/napi-go"
 )
 
 type Promise struct {
