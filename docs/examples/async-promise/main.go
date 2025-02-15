@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/akshayganeshen/napi-go"
-	"github.com/akshayganeshen/napi-go/entry"
+	"github.com/abhisekp/napi-go"
+	"github.com/abhisekp/napi-go/entry"
 )
 
 func init() {

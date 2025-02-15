@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/akshayganeshen/napi-go"
+	"github.com/abhisekp/napi-go"
 )
 
 type Env struct {

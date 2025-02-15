@@ -1,7 +1,7 @@
 package js
 
 import (
-	"github.com/akshayganeshen/napi-go"
+	"github.com/abhisekp/napi-go"
 )
 
 type Callback = func(env Env, this Value, args []Value) any
