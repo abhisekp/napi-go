@@ -1,13 +1,18 @@
 package napi
 
-type PropertyAttributes int
+/*
+#include <node/node_api.h>
+*/
+import "C"
+
+type PropertyAttributes C.napi_property_attributes
 
 const (
-	Default           PropertyAttributes = 0
-	Writable                             = 1 << 0
-	Enumerable                           = 1 << 1
-	Configurable                         = 1 << 2
-	Static                               = 1 << 10
-	DefaultMethod                        = Writable | Configurable
-	DefaultJSProperty                    = Writable | Enumerable | Configurable
+	Default           PropertyAttributes = C.napi_default
+	Writable          PropertyAttributes = C.napi_writable
+	Enumerable        PropertyAttributes = C.napi_enumerable
+	Configurable      PropertyAttributes = C.napi_configurable
+	Static            PropertyAttributes = C.napi_static
+	DefaultMethod     PropertyAttributes = C.napi_default_method
+	DefaultJSProperty PropertyAttributes = C.napi_default_jsproperty
 )

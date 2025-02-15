@@ -1,3 +1,3 @@
 module github.com/abhisekp/napi-go
 
-go 1.24
+go 1.14
