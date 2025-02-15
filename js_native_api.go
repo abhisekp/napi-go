@@ -911,29 +911,200 @@ func CreateExternalArrayBuffer(env Env, data unsafe.Pointer, length int, finaliz
 	return result, status
 }
 
-func GetTypedArrayInfo(env Env, value Value) (TypedArrayType, int, *byte, Status) {
-	var type_ TypedArrayType
-	var length C.size_t
-	var data *byte
-	status := Status(C.napi_get_typedarray_info(
-		C.napi_env(env),
-		C.napi_value(value),
-		(*C.napi_typedarray_type)(unsafe.Pointer(&type_)),
-		&length,
-		(**C.void)(unsafe.Pointer(&data)),
-	))
-	return type_, int(length), data, status
-}
-
-func CreateTypedArray(env Env, type_ TypedArrayType, length int, arrayBuffer Value, byteOffset int) (Value, Status) {
+func GetElement(env Env, object Value, index int) (Value, Status) {
 	var result Value
-	status := Status(C.napi_create_typedarray(
+	status := Status(C.napi_get_element(
 		C.napi_env(env),
-		C.napi_typedarray_type(type_),
-		C.size_t(length),
-		C.napi_value(arrayBuffer),
-		C.size_t(byteOffset),
+		C.napi_value(object),
+		C.uint32_t(index),
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
 	return result, status
+}
+
+func GetProperty(env Env, object, key Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_get_property(
+		C.napi_env(env),
+		C.napi_value(object),
+		C.napi_value(key),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func DeleteProperty(env Env, object, key Value) Status {
+	return Status(C.napi_delete_property(
+		C.napi_env(env),
+		C.napi_value(object),
+		C.napi_value(key),
+	))
+}
+
+func SetNamedProperty(env Env, object Value, name string, value Value) Status {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	return Status(C.napi_set_named_property(
+		C.napi_env(env),
+		C.napi_value(object),
+		cname,
+		C.napi_value(value),
+	))
+}
+
+func GetNamedProperty(env Env, object Value, name string) (Value, Status) {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	var result Value
+	status := Status(C.napi_get_named_property(
+		C.napi_env(env),
+		C.napi_value(object),
+		cname,
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func HasNamedProperty(env Env, object Value, name string) (bool, Status) {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	var result bool
+	status := Status(C.napi_has_named_property(
+		C.napi_env(env),
+		C.napi_value(object),
+		cname,
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func HasElement(env Env, object Value, index int) (bool, Status) {
+	var result bool
+	status := Status(C.napi_has_element(
+		C.napi_env(env),
+		C.napi_value(object),
+		C.uint32_t(index),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func DeleteElement(env Env, object Value, index int) Status {
+	return Status(C.napi_delete_element(
+		C.napi_env(env),
+		C.napi_value(object),
+		C.uint32_t(index),
+	))
+}
+
+func ObjectFreeze(env Env, object Value) Status {
+	return Status(C.napi_object_freeze(
+		C.napi_env(env),
+		C.napi_value(object),
+	))
+}
+
+func ObjectSeal(env Env, object Value) Status {
+	return Status(C.napi_object_seal(
+		C.napi_env(env),
+		C.napi_value(object),
+	))
+}
+
+func ThrowTypeError(env Env, code, msg string) Status {
+	codeCStr, msgCCstr := C.CString(code), C.CString(msg)
+	defer C.free(unsafe.Pointer(codeCStr))
+	defer C.free(unsafe.Pointer(msgCCstr))
+
+	return Status(C.napi_throw_type_error(
+		C.napi_env(env),
+		codeCStr,
+		msgCCstr,
+	))
+}
+
+func ThrowRangeError(env Env, code, msg string) Status {
+	codeCStr, msgCCstr := C.CString(code), C.CString(msg)
+	defer C.free(unsafe.Pointer(codeCStr))
+	defer C.free(unsafe.Pointer(msgCCstr))
+
+	return Status(C.napi_throw_range_error(
+		C.napi_env(env),
+		codeCStr,
+		msgCCstr,
+	))
+}
+
+func CreateTypeError(env Env, code, msg Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_type_error(
+		C.napi_env(env),
+		C.napi_value(code),
+		C.napi_value(msg),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateRangeError(env Env, code, msg Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_range_error(
+		C.napi_env(env),
+		C.napi_value(code),
+		C.napi_value(msg),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func IsExceptionPending(env Env) (bool, Status) {
+	var result bool
+	status := Status(C.napi_is_exception_pending(
+		C.napi_env(env),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetAndClearLastException(env Env) (Value, Status) {
+	var result Value
+	status := Status(C.napi_get_and_clear_last_exception(
+		C.napi_env(env),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+type CallbackScope struct {
+	scope C.napi_callback_scope
+}
+
+// OpenCallbackScope Function to open a callback scope
+func OpenCallbackScope(env Env, resourceObject, context Value) (CallbackScope, Status) {
+	var scope CallbackScope
+	status := Status(C.napi_open_callback_scope(
+		C.napi_env(env),
+		C.napi_value(resourceObject),
+		C.napi_value(context),
+		(*C.napi_callback_scope)(unsafe.Pointer(&scope.scope)),
+	))
+	return scope, status
+}
+
+// CloseCallbackScope Function to close a callback scope
+func CloseCallbackScope(env Env, scope CallbackScope) Status {
+	return Status(C.napi_close_callback_scope(
+		C.napi_env(env),
+		scope.scope,
+	))
+}
+
+// GetExtendedErrorInfo Function to retrieve extended error information
+func GetExtendedErrorInfo(env Env) (*C.napi_extended_error_info, Status) {
+	var errorInfo *C.napi_extended_error_info
+	status := Status(C.napi_get_last_error_info(
+		C.napi_env(env),
+		&errorInfo,
+	))
+	return errorInfo, status
 }
