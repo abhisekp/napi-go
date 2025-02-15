@@ -1108,3 +1108,93 @@ func GetExtendedErrorInfo(env Env) (*C.napi_extended_error_info, Status) {
 	))
 	return errorInfo, status
 }
+
+func CreateInt32(env Env, value int32) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_int32(
+		C.napi_env(env),
+		C.int32_t(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateUint32(env Env, value uint32) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_uint32(
+		C.napi_env(env),
+		C.uint32_t(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateInt64(env Env, value int64) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_int64(
+		C.napi_env(env),
+		C.int64_t(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateStringLatin1(env Env, str string) (Value, Status) {
+	cstr := C.CString(str)
+	defer C.free(unsafe.Pointer(cstr))
+
+	var result Value
+	status := Status(C.napi_create_string_latin1(
+		C.napi_env(env),
+		cstr,
+		C.size_t(len([]byte(str))),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateStringUtf16(env Env, str []uint16) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_string_utf16(
+		C.napi_env(env),
+		(*C.char16_t)(unsafe.Pointer(&str[0])),
+		C.size_t(len(str)),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CallFunction(env Env, recv Value, fn Value, argc int, argv []Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_call_function(
+		C.napi_env(env),
+		C.napi_value(recv),
+		C.napi_value(fn),
+		C.size_t(argc),
+		(*C.napi_value)(unsafe.Pointer(&argv[0])),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetNewTarget(env Env, info CallbackInfo) (Value, Status) {
+	var result Value
+	status := Status(C.napi_get_new_target(
+		C.napi_env(env),
+		C.napi_callback_info(info),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func NewInstance(env Env, constructor Value, argc int, argv []Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_new_instance(
+		C.napi_env(env),
+		C.napi_value(constructor),
+		C.size_t(argc),
+		(*C.napi_value)(unsafe.Pointer(&argv[0])),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}

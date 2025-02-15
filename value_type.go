@@ -5,7 +5,7 @@ package napi
 */
 import "C"
 
-type ValueType int
+type ValueType C.napi_valuetype
 
 const (
 	ValueTypeUndefined ValueType = C.napi_undefined

@@ -9,22 +9,6 @@ import (
 	"unsafe"
 )
 
-// Define Go types for N-API enums
-
-type ThreadsafeFunctionReleaseMode int
-
-const (
-	Release ThreadsafeFunctionReleaseMode = iota
-	Abort
-)
-
-type ThreadsafeFunctionCallMode int
-
-const (
-	Blocking ThreadsafeFunctionCallMode = iota
-	NonBlocking
-)
-
 func CreateAsyncWork(
 	env Env,
 	asyncResource, asyncResourceName Value,
@@ -129,11 +113,12 @@ func CreateThreadsafeFunction(
 
 func CallThreadsafeFunction(
 	fn ThreadsafeFunction,
+	mode ThreadsafeFunctionCallMode,
 ) Status {
 	return Status(C.napi_call_threadsafe_function(
 		C.napi_threadsafe_function(fn),
 		nil,
-		C.napi_tsfn_blocking,
+		C.napi_threadsafe_function_call_mode(mode),
 	))
 }
 
@@ -145,10 +130,11 @@ func AcquireThreadsafeFunction(fn ThreadsafeFunction) Status {
 
 func ReleaseThreadsafeFunction(
 	fn ThreadsafeFunction,
+	mode ThreadsafeFunctionReleaseMode,
 ) Status {
 	return Status(C.napi_release_threadsafe_function(
 		C.napi_threadsafe_function(fn),
-		C.napi_tsfn_release,
+		C.napi_threadsafe_function_release_mode(mode),
 	))
 }
 
@@ -178,7 +164,7 @@ func UnrefThreadsafeFunction(env Env, fn ThreadsafeFunction) Status {
 }
 
 func DestroyThreadsafeFunction(tsfn ThreadsafeFunction) Status {
-	return Status(C.napi_destroy_threadsafe_function(tsfn.fn))
+	return Status(C.napi_destroy_threadsafe_function(tsfn))
 }
 
 func BasicEnv(env Env) Status {
