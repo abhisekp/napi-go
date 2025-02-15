@@ -135,3 +135,28 @@ func ReleaseThreadsafeFunction(
 		C.napi_tsfn_release,
 	))
 }
+
+func GetThreadsafeFunctionContext(
+	fn ThreadsafeFunction,
+) (unsafe.Pointer, Status) {
+	var context unsafe.Pointer
+	status := Status(C.napi_get_threadsafe_function_context(
+		C.napi_threadsafe_function(fn),
+		&context,
+	))
+	return context, status
+}
+
+func RefThreadsafeFunction(env Env, fn ThreadsafeFunction) Status {
+	return Status(C.napi_ref_threadsafe_function(
+		C.napi_env(env),
+		C.napi_threadsafe_function(fn),
+	))
+}
+
+func UnrefThreadsafeFunction(env Env, fn ThreadsafeFunction) Status {
+	return Status(C.napi_unref_threadsafe_function(
+		C.napi_env(env),
+		C.napi_threadsafe_function(fn),
+	))
+}

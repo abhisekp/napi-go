@@ -339,3 +339,601 @@ func GetInstanceData(env Env) (any, Status) {
 
 	return provider.GetUserData(), status
 }
+
+func CreateBuffer(env Env, length int) (Value, *byte, Status) {
+	var result Value
+	var data *byte
+	status := Status(C.napi_create_buffer(
+		C.napi_env(env),
+		C.size_t(length),
+		(**C.void)(unsafe.Pointer(&data)),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, data, status
+}
+
+func CreateExternal(env Env, data unsafe.Pointer, finalize Finalize, finalizeHint unsafe.Pointer) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_external(
+		C.napi_env(env),
+		data,
+		C.napi_finalize(finalize),
+		finalizeHint,
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetValueInt32(env Env, value Value) (int32, Status) {
+	var result int32
+	status := Status(C.napi_get_value_int32(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.int32_t)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetValueUint32(env Env, value Value) (uint32, Status) {
+	var result uint32
+	status := Status(C.napi_get_value_uint32(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.uint32_t)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetValueInt64(env Env, value Value) (int64, Status) {
+	var result int64
+	status := Status(C.napi_get_value_int64(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.int64_t)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetValueBigIntInt64(env Env, value Value) (int64, bool, Status) {
+	var result int64
+	var lossless bool
+	status := Status(C.napi_get_value_bigint_int64(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.int64_t)(unsafe.Pointer(&result)),
+		(*C.bool)(unsafe.Pointer(&lossless)),
+	))
+	return result, lossless, status
+}
+
+func GetValueBigIntWords(env Env, value Value, signBit int, wordCount int, words *uint64) Status {
+	return Status(C.napi_get_value_bigint_words(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.int)(unsafe.Pointer(&signBit)),
+		(*C.size_t)(unsafe.Pointer(&wordCount)),
+		(*C.uint64_t)(unsafe.Pointer(words)),
+	))
+}
+
+func GetValueExternal(env Env, value Value) (unsafe.Pointer, Status) {
+	var result unsafe.Pointer
+	status := Status(C.napi_get_value_external(
+		C.napi_env(env),
+		C.napi_value(value),
+		&result,
+	))
+	return result, status
+}
+
+func CoerceToBool(env Env, value Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_coerce_to_bool(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CoerceToNumber(env Env, value Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_coerce_to_number(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CoerceToObject(env Env, value Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_coerce_to_object(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CoerceToString(env Env, value Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_coerce_to_string(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateBufferCopy(env Env, data []byte) (Value, *byte, Status) {
+	var result Value
+	var copiedData *byte
+	status := Status(C.napi_create_buffer_copy(
+		C.napi_env(env),
+		C.size_t(len(data)),
+		unsafe.Pointer(&data[0]),
+		(**C.void)(unsafe.Pointer(&copiedData)),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, copiedData, status
+}
+
+func GetBufferInfo(env Env, value Value) (*byte, int, Status) {
+	var data *byte
+	var length C.size_t
+	status := Status(C.napi_get_buffer_info(
+		C.napi_env(env),
+		C.napi_value(value),
+		(**C.void)(unsafe.Pointer(&data)),
+		&length,
+	))
+	return data, int(length), status
+}
+
+func GetArrayLength(env Env, value Value) (int, Status) {
+	var length C.uint32_t
+	status := Status(C.napi_get_array_length(
+		C.napi_env(env),
+		C.napi_value(value),
+		&length,
+	))
+	return int(length), status
+}
+
+func GetPrototype(env Env, value Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_get_prototype(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func InstanceOf(env Env, object, constructor Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_instanceof(
+		C.napi_env(env),
+		C.napi_value(object),
+		C.napi_value(constructor),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func IsArray(env Env, value Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_is_array(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func IsBuffer(env Env, value Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_is_buffer(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func IsError(env Env, value Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_is_error(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func IsPromise(env Env, value Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_is_promise(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func IsTypedArray(env Env, value Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_is_typedarray(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetTypedArrayInfo(env Env, value Value) (TypedArrayType, int, *byte, Status) {
+	var type_ TypedArrayType
+	var length C.size_t
+	var data *byte
+	status := Status(C.napi_get_typedarray_info(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.napi_typedarray_type)(unsafe.Pointer(&type_)),
+		&length,
+		(**C.void)(unsafe.Pointer(&data)),
+	))
+	return type_, int(length), data, status
+}
+
+func CreateTypedArray(env Env, type_ TypedArrayType, length int, arrayBuffer Value, byteOffset int) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_typedarray(
+		C.napi_env(env),
+		C.napi_typedarray_type(type_),
+		C.size_t(length),
+		C.napi_value(arrayBuffer),
+		C.size_t(byteOffset),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func AdjustExternalMemory(env Env, change int64) (int64, Status) {
+	var result int64
+	status := Status(C.napi_adjust_external_memory(
+		C.napi_env(env),
+		C.int64_t(change),
+		(*C.int64_t)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateDataView(env Env, length int, arrayBuffer Value, byteOffset int) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_dataview(
+		C.napi_env(env),
+		C.size_t(length),
+		C.napi_value(arrayBuffer),
+		C.size_t(byteOffset),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetDataViewInfo(env Env, value Value) (int, *byte, Status) {
+	var length C.size_t
+	var data *byte
+	status := Status(C.napi_get_dataview_info(
+		C.napi_env(env),
+		C.napi_value(value),
+		&length,
+		(**C.void)(unsafe.Pointer(&data)),
+	))
+	return int(length), data, status
+}
+
+func GetAllPropertyNames(env Env, object Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_get_all_property_names(
+		C.napi_env(env),
+		C.napi_value(object),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func HasOwnProperty(env Env, object, key Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_has_own_property(
+		C.napi_env(env),
+		C.napi_value(object),
+		C.napi_value(key),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func HasProperty(env Env, object, key Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_has_property(
+		C.napi_env(env),
+		C.napi_value(object),
+		C.napi_value(key),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetPropertyNames(env Env, object Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_get_property_names(
+		C.napi_env(env),
+		C.napi_value(object),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func DefineProperties(env Env, object Value, properties []PropertyDescriptor) Status {
+	return Status(C.napi_define_properties(
+		C.napi_env(env),
+		C.napi_value(object),
+		C.size_t(len(properties)),
+		(*C.napi_property_descriptor)(unsafe.Pointer(&properties[0])),
+	))
+}
+
+func Wrap(env Env, jsObject Value, nativeObject unsafe.Pointer, finalize Finalize, finalizeHint unsafe.Pointer) Status {
+	return Status(C.napi_wrap(
+		C.napi_env(env),
+		C.napi_value(jsObject),
+		nativeObject,
+		C.napi_finalize(finalize),
+		finalizeHint,
+		(*C.napi_value)(unsafe.Pointer(&jsObject)),
+	))
+}
+
+func Unwrap(env Env, jsObject Value) (unsafe.Pointer, Status) {
+	var nativeObject unsafe.Pointer
+	status := Status(C.napi_unwrap(
+		C.napi_env(env),
+		C.napi_value(jsObject),
+		&nativeObject,
+	))
+	return nativeObject, status
+}
+
+func RemoveWrap(env Env, jsObject Value) Status {
+	return Status(C.napi_remove_wrap(
+		C.napi_env(env),
+		C.napi_value(jsObject),
+	))
+}
+
+func OpenHandleScope(env Env) (HandleScope, Status) {
+	var scope HandleScope
+	status := Status(C.napi_open_handle_scope(
+		C.napi_env(env),
+		(*C.napi_handle_scope)(unsafe.Pointer(&scope)),
+	))
+	return scope, status
+}
+
+func CloseHandleScope(env Env, scope HandleScope) Status {
+	return Status(C.napi_close_handle_scope(
+		C.napi_env(env),
+		C.napi_handle_scope(scope),
+	))
+}
+
+func OpenEscapableHandleScope(env Env) (EscapableHandleScope, Status) {
+	var scope EscapableHandleScope
+	status := Status(C.napi_open_escapable_handle_scope(
+		C.napi_env(env),
+		(*C.napi_escapable_handle_scope)(unsafe.Pointer(&scope)),
+	))
+	return scope, status
+}
+
+func CloseEscapableHandleScope(env Env, scope EscapableHandleScope) Status {
+	return Status(C.napi_close_escapable_handle_scope(
+		C.napi_env(env),
+		C.napi_escapable_handle_scope(scope),
+	))
+}
+
+func EscapeHandle(env Env, scope EscapableHandleScope, escapee Value) (Value, Status) {
+	var result Value
+	status := Status(C.napi_escape_handle(
+		C.napi_env(env),
+		C.napi_escapable_handle_scope(scope),
+		C.napi_value(escapee),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateReference(env Env, value Value, initialRefcount int) (Reference, Status) {
+	var ref Reference
+	status := Status(C.napi_create_reference(
+		C.napi_env(env),
+		C.napi_value(value),
+		C.uint32_t(initialRefcount),
+		(*C.napi_ref)(unsafe.Pointer(&ref)),
+	))
+	return ref, status
+}
+
+func DeleteReference(env Env, ref Reference) Status {
+	return Status(C.napi_delete_reference(
+		C.napi_env(env),
+		C.napi_ref(ref),
+	))
+}
+
+func ReferenceRef(env Env, ref Reference) (int, Status) {
+	var result C.uint32_t
+	status := Status(C.napi_reference_ref(
+		C.napi_env(env),
+		C.napi_ref(ref),
+		&result,
+	))
+	return int(result), status
+}
+
+func ReferenceUnref(env Env, ref Reference) (int, Status) {
+	var result C.uint32_t
+	status := Status(C.napi_reference_unref(
+		C.napi_env(env),
+		C.napi_ref(ref),
+		&result,
+	))
+	return int(result), status
+}
+
+func GetReferenceValue(env Env, ref Reference) (Value, Status) {
+	var result Value
+	status := Status(C.napi_get_reference_value(
+		C.napi_env(env),
+		C.napi_ref(ref),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetValueBigIntUint64(env Env, value Value) (uint64, bool, Status) {
+	var result uint64
+	var lossless bool
+	status := Status(C.napi_get_value_bigint_uint64(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.uint64_t)(unsafe.Pointer(&result)),
+		(*C.bool)(unsafe.Pointer(&lossless)),
+	))
+	return result, lossless, status
+}
+
+func CreateBigIntInt64(env Env, value int64) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_bigint_int64(
+		C.napi_env(env),
+		C.int64_t(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateBigIntUint64(env Env, value uint64) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_bigint_uint64(
+		C.napi_env(env),
+		C.uint64_t(value),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func CreateBigIntWords(env Env, signBit int, wordCount int, words *uint64) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_bigint_words(
+		C.napi_env(env),
+		C.int(signBit),
+		C.size_t(wordCount),
+		(*C.uint64_t)(unsafe.Pointer(words)),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func IsDate(env Env, value Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_is_date(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func IsDetachedArrayBuffer(env Env, value Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_is_detached_arraybuffer(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.bool)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func DetachArrayBuffer(env Env, value Value) Status {
+	return Status(C.napi_detach_arraybuffer(
+		C.napi_env(env),
+		C.napi_value(value),
+	))
+}
+
+func CreateArrayBuffer(env Env, length int) (Value, *byte, Status) {
+	var result Value
+	var data *byte
+	status := Status(C.napi_create_arraybuffer(
+		C.napi_env(env),
+		C.size_t(length),
+		(**C.void)(unsafe.Pointer(&data)),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, data, status
+}
+
+func GetArrayBufferInfo(env Env, value Value) (*byte, int, Status) {
+	var data *byte
+	var length C.size_t
+	status := Status(C.napi_get_arraybuffer_info(
+		C.napi_env(env),
+		C.napi_value(value),
+		(**C.void)(unsafe.Pointer(&data)),
+		&length,
+	))
+	return data, int(length), status
+}
+
+func CreateExternalArrayBuffer(env Env, data unsafe.Pointer, length int, finalize Finalize, finalizeHint unsafe.Pointer) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_external_arraybuffer(
+		C.napi_env(env),
+		data,
+		C.size_t(length),
+		C.napi_finalize(finalize),
+		finalizeHint,
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
+
+func GetTypedArrayInfo(env Env, value Value) (TypedArrayType, int, *byte, Status) {
+	var type_ TypedArrayType
+	var length C.size_t
+	var data *byte
+	status := Status(C.napi_get_typedarray_info(
+		C.napi_env(env),
+		C.napi_value(value),
+		(*C.napi_typedarray_type)(unsafe.Pointer(&type_)),
+		&length,
+		(**C.void)(unsafe.Pointer(&data)),
+	))
+	return type_, int(length), data, status
+}
+
+func CreateTypedArray(env Env, type_ TypedArrayType, length int, arrayBuffer Value, byteOffset int) (Value, Status) {
+	var result Value
+	status := Status(C.napi_create_typedarray(
+		C.napi_env(env),
+		C.napi_typedarray_type(type_),
+		C.size_t(length),
+		C.napi_value(arrayBuffer),
+		C.size_t(byteOffset),
+		(*C.napi_value)(unsafe.Pointer(&result)),
+	))
+	return result, status
+}
