@@ -163,10 +163,6 @@ func UnrefThreadsafeFunction(env Env, fn ThreadsafeFunction) Status {
 	))
 }
 
-func DestroyThreadsafeFunction(tsfn ThreadsafeFunction) Status {
-	return Status(C.napi_destroy_threadsafe_function(tsfn))
-}
-
 func BasicEnv(env Env) Status {
 	return Status(C.node_api_basic_env(C.napi_env(env)))
 }
