@@ -164,18 +164,6 @@ func UnrefThreadsafeFunction(env Env, fn ThreadsafeFunction) Status {
 	))
 }
 
-func BasicEnv(env Env) Status {
-	return Status(C.node_api_basic_env(C.napi_env(env)))
-}
-
-func BasicFinalize(env Env, finalizeData, finalizeHint unsafe.Pointer) Status {
-	return Status(C.node_api_basic_finalize(
-		C.napi_env(env),
-		finalizeData,
-		finalizeHint,
-	))
-}
-
 func ThrowSyntaxError(env Env, code, msg string) Status {
 	codeCStr, msgCStr := C.CString(code), C.CString(msg)
 	defer C.free(unsafe.Pointer(codeCStr))
@@ -199,54 +187,12 @@ func CreateSyntaxError(env Env, code, msg Value) (Value, Status) {
 	return result, status
 }
 
-func SymbolFor(env Env, description Value) (Value, Status) {
+func SymbolFor(env Env, description string) (Value, Status) {
 	var result Value
 	status := Status(C.node_api_symbol_for(
 		C.napi_env(env),
-		C.napi_value(description),
-		(*C.napi_value)(unsafe.Pointer(&result)),
-	))
-	return result, status
-}
-
-func CreateBufferFromArrayBuffer(env Env, arrayBuffer Value, byteOffset, length int) (Value, *byte, Status) {
-	var result Value
-	var data *byte
-	status := Status(C.node_api_create_buffer_from_arraybuffer(
-		C.napi_env(env),
-		C.napi_value(arrayBuffer),
-		C.size_t(byteOffset),
-		C.size_t(length),
-		(**C.void)(unsafe.Pointer(&data)),
-		(*C.napi_value)(unsafe.Pointer(&result)),
-	))
-	return result, data, status
-}
-
-func CreateExternalStringLatin1(env Env, str string, finalize Finalize, finalizeHint unsafe.Pointer) (Value, Status) {
-	cstr := C.CString(str)
-	defer C.free(unsafe.Pointer(cstr))
-
-	var result Value
-	status := Status(C.node_api_create_external_string_latin1(
-		C.napi_env(env),
-		cstr,
-		C.size_t(len([]byte(str))),
-		C.napi_finalize(finalize),
-		finalizeHint,
-		(*C.napi_value)(unsafe.Pointer(&result)),
-	))
-	return result, status
-}
-
-func CreateExternalStringUtf16(env Env, str []uint16, finalize Finalize, finalizeHint unsafe.Pointer) (Value, Status) {
-	var result Value
-	status := Status(C.node_api_create_external_string_utf16(
-		C.napi_env(env),
-		(*C.char16_t)(unsafe.Pointer(&str[0])),
-		C.size_t(len(str)),
-		C.napi_finalize(finalize),
-		finalizeHint,
+		C.CString(description),
+		C.size_t(len(description)),
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
 	return result, status
@@ -289,12 +235,4 @@ func CreatePropertyKeyUtf8(env Env, str string) (Value, Status) {
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
 	return result, status
-}
-
-func PostFinalizer(env Env, finalizeData, finalizeHint unsafe.Pointer) Status {
-	return Status(C.node_api_post_finalizer(
-		C.napi_env(env),
-		finalizeData,
-		finalizeHint,
-	))
 }
