@@ -340,13 +340,15 @@ func GetInstanceData(env Env) (any, Status) {
 	return provider.GetUserData(), status
 }
 
-func CreateBuffer(env Env, length int) (Value, *byte, Status) {
+func CreateBuffer(env Env, length int) (Value, []byte, Status) {
 	var result Value
-	var data *byte
+	data := make([]byte, length)
+	dataPtr := unsafe.Pointer(&data[0])
+
 	status := Status(C.napi_create_buffer(
 		C.napi_env(env),
 		C.size_t(length),
-		(**C.void)(unsafe.Pointer(&data)),
+		&dataPtr,
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
 	return result, data, status
@@ -354,10 +356,11 @@ func CreateBuffer(env Env, length int) (Value, *byte, Status) {
 
 func CreateExternal(env Env, data unsafe.Pointer, finalize Finalize, finalizeHint unsafe.Pointer) (Value, Status) {
 	var result Value
+	finalizer := FinalizeToFinalizer(finalize)
 	status := Status(C.napi_create_external(
 		C.napi_env(env),
 		data,
-		C.napi_finalize(finalize),
+		C.napi_finalize(unsafe.Pointer(&finalizer)),
 		finalizeHint,
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
@@ -365,13 +368,13 @@ func CreateExternal(env Env, data unsafe.Pointer, finalize Finalize, finalizeHin
 }
 
 func GetValueInt32(env Env, value Value) (int32, Status) {
-	var result int32
+	var result C.int32_t
 	status := Status(C.napi_get_value_int32(
 		C.napi_env(env),
 		C.napi_value(value),
-		(*C.int32_t)(unsafe.Pointer(&result)),
+		&result,
 	))
-	return result, status
+	return int32(result), status
 }
 
 func GetValueUint32(env Env, value Value) (uint32, Status) {
@@ -469,11 +472,12 @@ func CoerceToString(env Env, value Value) (Value, Status) {
 func CreateBufferCopy(env Env, data []byte) (Value, *byte, Status) {
 	var result Value
 	var copiedData *byte
+	copiedDataPtr := unsafe.Pointer(&copiedData)
 	status := Status(C.napi_create_buffer_copy(
 		C.napi_env(env),
 		C.size_t(len(data)),
 		unsafe.Pointer(&data[0]),
-		(**C.void)(unsafe.Pointer(&copiedData)),
+		&copiedDataPtr,
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
 	return result, copiedData, status
@@ -482,10 +486,13 @@ func CreateBufferCopy(env Env, data []byte) (Value, *byte, Status) {
 func GetBufferInfo(env Env, value Value) (*byte, int, Status) {
 	var data *byte
 	var length C.size_t
+
+	dataPtr := unsafe.Pointer(&data)
+
 	status := Status(C.napi_get_buffer_info(
 		C.napi_env(env),
 		C.napi_value(value),
-		(**C.void)(unsafe.Pointer(&data)),
+		&dataPtr,
 		&length,
 	))
 	return data, int(length), status
@@ -572,18 +579,24 @@ func IsTypedArray(env Env, value Value) (bool, Status) {
 	return result, status
 }
 
-func GetTypedArrayInfo(env Env, value Value) (TypedArrayType, int, *byte, Status) {
+func GetTypedArrayInfo(env Env, value Value) (TypedArrayType, int, *byte, Value, int, Status) {
 	var type_ TypedArrayType
 	var length C.size_t
 	var data *byte
+	var arrayBuffer Value
+	var byteOffset C.size_t
+
+	dataPtr := unsafe.Pointer(&data)
 	status := Status(C.napi_get_typedarray_info(
 		C.napi_env(env),
 		C.napi_value(value),
 		(*C.napi_typedarray_type)(unsafe.Pointer(&type_)),
 		&length,
-		(**C.void)(unsafe.Pointer(&data)),
+		&dataPtr,
+		(*C.napi_value)(unsafe.Pointer(&arrayBuffer)),
+		&byteOffset,
 	))
-	return type_, int(length), data, status
+	return type_, int(length), data, arrayBuffer, int(byteOffset), status
 }
 
 func CreateTypedArray(env Env, type_ TypedArrayType, length int, arrayBuffer Value, byteOffset int) (Value, Status) {
@@ -621,23 +634,32 @@ func CreateDataView(env Env, length int, arrayBuffer Value, byteOffset int) (Val
 	return result, status
 }
 
-func GetDataViewInfo(env Env, value Value) (int, *byte, Status) {
+func GetDataViewInfo(env Env, value Value) (int, *byte, Value, int, Status) {
 	var length C.size_t
 	var data *byte
+	var arrayBuffer Value
+	var byteOffset C.size_t
+
+	dataPtr := unsafe.Pointer(&data)
 	status := Status(C.napi_get_dataview_info(
 		C.napi_env(env),
 		C.napi_value(value),
 		&length,
-		(**C.void)(unsafe.Pointer(&data)),
+		&dataPtr,
+		(*C.napi_value)(unsafe.Pointer(&arrayBuffer)),
+		&byteOffset,
 	))
-	return int(length), data, status
+	return int(length), data, arrayBuffer, int(byteOffset), status
 }
 
-func GetAllPropertyNames(env Env, object Value) (Value, Status) {
+func GetAllPropertyNames(env Env, object Value, keyMode KeyCollectionMode, keyFilter KeyFilter, keyConversion KeyConversion) (Value, Status) {
 	var result Value
 	status := Status(C.napi_get_all_property_names(
 		C.napi_env(env),
 		C.napi_value(object),
+		C.napi_key_collection_mode(keyMode),
+		C.napi_key_filter(keyFilter),
+		C.napi_key_conversion(keyConversion),
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
 	return result, status
@@ -684,15 +706,18 @@ func DefineProperties(env Env, object Value, properties []PropertyDescriptor) St
 	))
 }
 
+// Wrap function to use the Finalizer type internally
 func Wrap(env Env, jsObject Value, nativeObject unsafe.Pointer, finalize Finalize, finalizeHint unsafe.Pointer) Status {
-	return Status(C.napi_wrap(
+	var result Reference
+	status := Status(C.napi_wrap(
 		C.napi_env(env),
 		C.napi_value(jsObject),
 		nativeObject,
-		C.napi_finalize(finalize),
+		C.napi_finalize(unsafe.Pointer(&finalize)),
 		finalizeHint,
-		(*C.napi_value)(unsafe.Pointer(&jsObject)),
+		(*C.napi_ref)(unsafe.Pointer(&result)),
 	))
+	return status
 }
 
 func Unwrap(env Env, jsObject Value) (unsafe.Pointer, Status) {
@@ -706,9 +731,11 @@ func Unwrap(env Env, jsObject Value) (unsafe.Pointer, Status) {
 }
 
 func RemoveWrap(env Env, jsObject Value) Status {
+	var result unsafe.Pointer
 	return Status(C.napi_remove_wrap(
 		C.napi_env(env),
 		C.napi_value(jsObject),
+		&result,
 	))
 }
 
@@ -724,7 +751,7 @@ func OpenHandleScope(env Env) (HandleScope, Status) {
 func CloseHandleScope(env Env, scope HandleScope) Status {
 	return Status(C.napi_close_handle_scope(
 		C.napi_env(env),
-		C.napi_handle_scope(scope),
+		C.napi_handle_scope(unsafe.Pointer(&scope)),
 	))
 }
 
@@ -740,7 +767,7 @@ func OpenEscapableHandleScope(env Env) (EscapableHandleScope, Status) {
 func CloseEscapableHandleScope(env Env, scope EscapableHandleScope) Status {
 	return Status(C.napi_close_escapable_handle_scope(
 		C.napi_env(env),
-		C.napi_escapable_handle_scope(scope),
+		C.napi_escapable_handle_scope(unsafe.Pointer(&scope)),
 	))
 }
 
@@ -748,7 +775,7 @@ func EscapeHandle(env Env, scope EscapableHandleScope, escapee Value) (Value, St
 	var result Value
 	status := Status(C.napi_escape_handle(
 		C.napi_env(env),
-		C.napi_escapable_handle_scope(scope),
+		C.napi_escapable_handle_scope(unsafe.Pointer(&scope)),
 		C.napi_value(escapee),
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
@@ -769,7 +796,7 @@ func CreateReference(env Env, value Value, initialRefcount int) (Reference, Stat
 func DeleteReference(env Env, ref Reference) Status {
 	return Status(C.napi_delete_reference(
 		C.napi_env(env),
-		C.napi_ref(ref),
+		C.napi_ref(unsafe.Pointer(&ref)),
 	))
 }
 
@@ -777,7 +804,7 @@ func ReferenceRef(env Env, ref Reference) (int, Status) {
 	var result C.uint32_t
 	status := Status(C.napi_reference_ref(
 		C.napi_env(env),
-		C.napi_ref(ref),
+		C.napi_ref(unsafe.Pointer(&ref)),
 		&result,
 	))
 	return int(result), status
@@ -787,7 +814,7 @@ func ReferenceUnref(env Env, ref Reference) (int, Status) {
 	var result C.uint32_t
 	status := Status(C.napi_reference_unref(
 		C.napi_env(env),
-		C.napi_ref(ref),
+		C.napi_ref(ref.Ref),
 		&result,
 	))
 	return int(result), status
@@ -797,7 +824,7 @@ func GetReferenceValue(env Env, ref Reference) (Value, Status) {
 	var result Value
 	status := Status(C.napi_get_reference_value(
 		C.napi_env(env),
-		C.napi_ref(ref),
+		C.napi_ref(unsafe.Pointer(&ref)),
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
 	return result, status
@@ -877,10 +904,11 @@ func DetachArrayBuffer(env Env, value Value) Status {
 func CreateArrayBuffer(env Env, length int) (Value, *byte, Status) {
 	var result Value
 	var data *byte
+	dataPtr := unsafe.Pointer(&data)
 	status := Status(C.napi_create_arraybuffer(
 		C.napi_env(env),
 		C.size_t(length),
-		(**C.void)(unsafe.Pointer(&data)),
+		&dataPtr,
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
 	return result, data, status
@@ -889,10 +917,11 @@ func CreateArrayBuffer(env Env, length int) (Value, *byte, Status) {
 func GetArrayBufferInfo(env Env, value Value) (*byte, int, Status) {
 	var data *byte
 	var length C.size_t
+	dataPtr := unsafe.Pointer(&data)
 	status := Status(C.napi_get_arraybuffer_info(
 		C.napi_env(env),
 		C.napi_value(value),
-		(**C.void)(unsafe.Pointer(&data)),
+		&dataPtr,
 		&length,
 	))
 	return data, int(length), status
@@ -900,11 +929,12 @@ func GetArrayBufferInfo(env Env, value Value) (*byte, int, Status) {
 
 func CreateExternalArrayBuffer(env Env, data unsafe.Pointer, length int, finalize Finalize, finalizeHint unsafe.Pointer) (Value, Status) {
 	var result Value
+	finalizer := FinalizeToFinalizer(finalize)
 	status := Status(C.napi_create_external_arraybuffer(
 		C.napi_env(env),
 		data,
 		C.size_t(length),
-		C.napi_finalize(finalize),
+		C.napi_finalize(unsafe.Pointer(&finalizer)),
 		finalizeHint,
 		(*C.napi_value)(unsafe.Pointer(&result)),
 	))
@@ -933,12 +963,15 @@ func GetProperty(env Env, object, key Value) (Value, Status) {
 	return result, status
 }
 
-func DeleteProperty(env Env, object, key Value) Status {
-	return Status(C.napi_delete_property(
+func DeleteProperty(env Env, object, key Value) (bool, Status) {
+	var result bool
+	status := Status(C.napi_delete_property(
 		C.napi_env(env),
 		C.napi_value(object),
 		C.napi_value(key),
+		(*C.bool)(unsafe.Pointer(&result)),
 	))
+	return result, status
 }
 
 func SetNamedProperty(env Env, object Value, name string, value Value) Status {
@@ -989,12 +1022,15 @@ func HasElement(env Env, object Value, index int) (bool, Status) {
 	return result, status
 }
 
-func DeleteElement(env Env, object Value, index int) Status {
-	return Status(C.napi_delete_element(
+func DeleteElement(env Env, object Value, index int) (bool, Status) {
+	var result bool
+	status := Status(C.napi_delete_element(
 		C.napi_env(env),
 		C.napi_value(object),
 		C.uint32_t(index),
+		(*C.bool)(unsafe.Pointer(&result)),
 	))
+	return result, status
 }
 
 func ObjectFreeze(env Env, object Value) Status {
@@ -1077,18 +1113,6 @@ func GetAndClearLastException(env Env) (Value, Status) {
 
 type CallbackScope struct {
 	scope C.napi_callback_scope
-}
-
-// OpenCallbackScope Function to open a callback scope
-func OpenCallbackScope(env Env, resourceObject, context Value) (CallbackScope, Status) {
-	var scope CallbackScope
-	status := Status(C.napi_open_callback_scope(
-		C.napi_env(env),
-		C.napi_value(resourceObject),
-		C.napi_value(context),
-		(*C.napi_callback_scope)(unsafe.Pointer(&scope.scope)),
-	))
-	return scope, status
 }
 
 // CloseCallbackScope Function to close a callback scope
