@@ -1,6 +1,7 @@
 package napi
 
 /*
+#include <stdlib.h>
 #include <node/node_api.h>
 */
 import "C"
