@@ -1,4 +1,4 @@
-# napi-go
+# napi-go ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/abhisekp/napi-go?style=flat-square)
 
 A Go library for building Node.js Native Addons using Node-API.
 
